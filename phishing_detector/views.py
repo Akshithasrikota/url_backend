@@ -1,32 +1,18 @@
 from django.shortcuts import render
-
-# Create your views here.
 import os
 import numpy as np
 import pandas as pd
 from urllib.parse import urlparse
-
-#print("Loading from:", os.path.join(MODEL_PATH, "eigenvectors.npy"))
-
 import joblib
 import re 
-from sklearn.preprocessing import MinMaxScaler
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-# Define path to model files
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, "phishing_detector", "model")  # Adjust to your app name
-print("Loading from:", os.path.join(MODEL_PATH, "eigenvectors.npy"))
-# Load models
-#pca_eigen_vectors = joblib.load(os.path.join(MODEL_PATH, "pca_eigen_vectors.pkl"))
+MODEL_PATH = os.path.join(BASE_DIR, "phishing_detector", "model")  
 classifier = joblib.load(os.path.join(MODEL_PATH, "rf_model.pkl"))
 
 
-import re
-import math
-import numpy as np
-from urllib.parse import urlparse
 #57
 def ssl_final_state(url):
     return 1 if url.startswith("https") else -1
@@ -117,14 +103,8 @@ def extract_features_test(url):
   features.append(url_length(url))
   return features
 
-
-
-
-
-
 @api_view(["POST"])
 def predict_url(request):
-    """ API to predict if a URL is phishing or not """
     url = request.data.get("url", "")
     if not url:
         return Response({"error": "No URL provided"}, status=400)
@@ -138,16 +118,13 @@ def predict_url(request):
 
 
 
-import pandas as pd
-import numpy as np
-import os
+
 import logging
 from django.conf import settings
 from django.core.files.storage import default_storage
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
 
-logger = logging.getLogger(__name__)  # Logger for debugging
+
+logger = logging.getLogger(__name__)  
 
 
 
@@ -169,16 +146,9 @@ def read_file(file_path):
         print(f"Error reading file: {e}")
         return None
 
-import pandas as pd
-import numpy as np
-import os
-import logging
-from django.conf import settings
-from django.core.files.storage import default_storage
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
 
-logger = logging.getLogger(__name__)  # Logger for debugging
+
+logger = logging.getLogger(__name__)  
 
 @api_view(["POST"])
 def upload_file(request):
@@ -187,7 +157,7 @@ def upload_file(request):
         if not uploaded_file:
             return Response({"error": "No file uploaded"}, status=400)
 
-        # Save file temporarily
+        
         file_path = default_storage.save(uploaded_file.name, uploaded_file)
         file_full_path = os.path.join(settings.MEDIA_ROOT, file_path)
 
@@ -196,32 +166,30 @@ def upload_file(request):
         df=read_file(file_full_path)
         if df is None:
             return 
-          # Process only the first 2 rows
+          
 
-        # Ensure 'url' column is present
+    
         if len(df.columns) == 1:
             df.columns = ['url']
         elif 'url' not in df.columns:
             logger.error("File must contain a column named 'url' or a single column with URLs")
             return Response({"error": "File must contain a column named 'url' or a single column with URLs"}, status=400)
 
-        # Extract features for each URL
+        
         data = [extract_features_test(url) for url in df['url']]
         data = np.array(data).reshape(len(data), -1)
 
-        # Make predictions
         predictions = classifier.predict(data)
         df["Prediction"] = ["Phishing" if pred == 0 else "Not Phishing" for pred in predictions]
 
-        # Save results
         result_file_name = uploaded_file.name.replace(".csv", "_results.csv")
         result_file_path = os.path.join(settings.MEDIA_ROOT, result_file_name)
         df.to_csv(result_file_path, index=False)
 
-        # Return the file path so frontend can request it for download
+
         return Response({
             "message": "Predictions saved",
-            "file_path": f"/media/{result_file_name}"  # Correct path for frontend
+            "file_path": f"/media/{result_file_name}"  
         })
 
     except Exception as e:
@@ -231,12 +199,11 @@ def upload_file(request):
 
 from django.http import FileResponse
 from django.conf import settings
-import os
 
 @api_view(["GET"])
 def download_file(request):
     try:
-        file_name = request.GET.get("file_name")  # Get file name from frontend
+        file_name = request.GET.get("file_name")  
         file_path = os.path.join(settings.MEDIA_ROOT, file_name)
 
         if os.path.exists(file_path):
